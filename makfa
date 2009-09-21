@@ -96,14 +96,12 @@ class Show(Command):
         self.parser = OptionParser(usage='makfa show [entries]')
 
     def output(self, entry, db, options):
-        rafsi = ', '.join(['-%s-' % r for r in db[entry]['rafsi']])
+        meta = [db[entry]['type'],
+                db[entry]['selmaho'],
+                ', '.join(['-%s-' % r for r in db[entry]['rafsi']])]
+        print '%s : %s' % (entry, ' '.join([i for i in meta if i]))
         defn = db[entry]['definition'].encode('utf-8')
-        print '%s : %s' % (entry, db[entry]['type'])
         print '%s : %s' % (' ' * len(entry), defn)
-        if db[entry]['selmaho']:
-            print '%s : %s' % (' ' * len(entry), db[entry]['selmaho'])            
-        if rafsi:
-            print '%s : %s' % (' ' * len(entry), rafsi)
         for place in db[entry]['places']:
             places = [('"%s" in the sense of "%s"' % i if i[1] else
                        '"%s"' % i[0])
