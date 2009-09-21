@@ -1,0 +1,337 @@
+#!/usr/bin/env python
+
+from optparse import OptionParser
+from os import path
+import cPickle as pickle
+import re
+import sys
+import urllib
+import xml.etree.cElementTree as etree
+
+
+class Find():
+
+    def __init__(self):
+        parser = OptionParser(usage='makfa find [options] [query]')
+        parser.add_option('-t', '--type', dest='type', help='Type of word')
+        parser.add_option('-v', '--valsi', dest='valsi',
+                          help='Match entry name')
+        parser.add_option('-g', '--gloss', dest='gloss',
+                          help='Match against gloss words')
+        parser.add_option('-r', '--rafsi', dest='rafsi',
+                          help='Match against rafsi affixes')
+        parser.add_option('-s', '--selmaho', dest='selmaho',
+                          help='Match against selmaho grammatical class')
+        parser.add_option('-d', '--definition', dest='definition',
+                          help='Match against definitions by regexp')
+        parser.add_option('-n', '--notes', dest='notes',
+                          help='Match against notes by regexp')
+        parser.add_option('-R', '--regexp', action='store_true', dest='regexp',
+                          help='Match more fields by regexp')
+        self.parser = parser
+
+    def results(self, argv, db):
+        (options, args) = self.parser.parse_args(argv)
+        opts = {'type': options.type, 'valsi': options.valsi,
+                'gloss': options.gloss, 'rafsi': options.rafsi,
+                'selmaho': options.selmaho, 'definition': options.definition,
+                'notes': options.notes, 'regexp': options.regexp,
+                'query': ' '.join(args)}
+        return db.query(**opts)
+
+    def parse(self, argv, db):
+        for entry in self.results(argv, db):
+            print entry
+
+
+class Console():
+
+    def __init__(self):
+        self.parser = OptionParser(usage='makfa console')
+
+    def parse(self, argv, db):
+        self.parser.parse_args(argv)
+        import readline
+        finder = Find()
+        shower = Show()
+        while True:
+            input = raw_input('> ').split()
+            results = finder.results(input, db)
+            results.reverse()
+            if results:
+                shower.parse(results, db)
+
+
+class Command():
+
+    def __init__(self):
+        self.name = self.__class__.__name__.lower()
+        self.parser = OptionParser(usage='makfa %s [entries]' % self.name)
+        self.parser.add_option('-q', '--quiet', action='store_true',
+                               dest='quiet', help='Pipe friendly output')
+
+    def parse(self, argv, db):
+        (options, args) = self.parser.parse_args(argv)
+        if args:
+            for entry in args:
+                entry = entry.replace('h', "'")
+                if entry in db:
+                    self.output(entry, db, options)
+        else:
+            while True:
+                entry = raw_input().replace('h', "'")
+                if entry in db:
+                    self.output(entry, db, options)
+
+    def output(self, entry, db, options):
+        if options.quiet:
+            print db[entry][self.name].encode('utf-8')
+        else:
+            print '%s : %s' % (entry, db[entry][self.name].encode('utf-8'))
+
+
+class Show(Command):
+
+    def __init__(self):
+        self.parser = OptionParser(usage='makfa show [entries]')
+
+    def output(self, entry, db, options):
+        rafsi = ', '.join(['-%s-' % r for r in db[entry]['rafsi']])
+        defn = db[entry]['definition'].encode('utf-8')
+        print '%s : %s' % (entry, db[entry]['type'])
+        print '%s : %s' % (' ' * len(entry), defn)
+        if db[entry]['selmaho']:
+            print '%s : %s' % (' ' * len(entry), db[entry]['selmaho'])            
+        if rafsi:
+            print '%s : %s' % (' ' * len(entry), rafsi)
+        for place in db[entry]['places']:
+            places = [('"%s" in the sense of "%s"' % i if i[1] else
+                       '"%s"' % i[0])
+                      for i in db[entry]['places'][place]]
+            print '%s : (x%d) %s' % (' ' * len(entry), place, ', '.join(places))
+        if db[entry]['notes']:
+            notes = db[entry]['notes'].encode('utf-8')
+            print '%s : %s' % (' ' * len(entry), notes)
+        print
+
+
+class Type(Command):
+    pass
+
+
+class Gloss(Command):
+
+    def __init__(self):
+        Command.__init__(self)
+        self.parser.add_option('-p', '--place', type='int', default=1,
+                               dest='place', help='Gloss word place')
+
+    def output(self, entry, db, options):
+        if options.place in db[entry]['places']:
+            if options.quiet:
+                print db[entry]['places'][options.place][0][0]
+            else:
+                places = [('"%s" in the sense of "%s"' % i if i[1] else
+                           '"%s"' % i[0])
+                          for i in db[entry]['places'][options.place]]
+                print '%s : %s' % (entry, ', '.join(places))
+        else:
+            if options.quiet:
+                print
+            else:
+                print '%s : ' % entry
+
+
+class Rafsi(Command):
+    def output(self, entry, db, options):
+        if options.quiet:
+            print ' '.join(db[entry]['rafsi'])
+        else:
+            rafsi = ['-%s-' % r for r in db[entry]['rafsi']]
+            print '%s : %s' % (entry, ', '.join(rafsi))
+
+
+class Selmaho(Command):
+    pass
+
+
+class Definition(Command):
+    pass
+
+
+class Notes(Command):
+    pass
+
+
+class Dictionary():
+
+    def __init__(self):
+        try:
+            self._db = pickle.load(open(path.expanduser('~/.makfa.dump')))
+        except:
+            db = {'order': [], 'entries': {}}
+            url = 'http://jbovlaste.lojban.org/export/xml-export.html?lang=en'
+            tree = etree.parse(urllib.urlopen(url))
+            types = ['gismu', 'cmavo', 'cmavo cluster', 'lujvo', "fu'ivla",
+                     'experimental gismu', 'experimental cmavo', 'cmene']
+            for type in types:
+                for valsi in tree.findall('//valsi'):
+                    if valsi.get('type') == type:
+                        word = valsi.get('word')
+                        db['order'].append(word)
+                        db['entries'][word] = {'type': type, 'rafsi': [],
+                                               'selmaho': None,
+                                               'definition': None,
+                                               'notes': None, 'places': {}}
+                        for child in valsi.getchildren():
+                            if child.tag == 'rafsi':
+                                db['entries'][word]['rafsi'].append(child.text)
+                            elif child.tag == 'selmaho':
+                                db['entries'][word]['selmaho'] = child.text
+                            elif child.tag == 'definition':
+                                db['entries'][word]['definition'] = \
+                                    self._prettyplace(child.text)
+                            elif child.tag == 'notes':
+                                db['entries'][word]['notes'] = \
+                                    self._prettyplace(child.text)
+            for valsi in tree.findall('//nlword'):
+                word = valsi.get('valsi')
+                place = int(valsi.get('place') or '1')
+                sense = valsi.get('sense')
+                if place not in db['entries'][word]['places']:
+                    db['entries'][word]['places'][place] = []
+                db['entries'][word]['places'][place]. \
+                    append((valsi.get('word'), sense))
+            pickle.dump(db, open(path.expanduser('~/.makfa.dump'), 'w'))
+            self._db = db
+
+    def find(self, type=None, valsi=None, gloss=None, rafsi=None,
+             selmaho=None, definition=None, notes=None, regexp=False):
+        results = self._db['order']
+        results = self._type(results, type, regexp)
+        results = self._valsi(results, valsi, regexp)
+        results = self._gloss(results, gloss, regexp)
+        results = self._rafsi(results, rafsi, regexp)
+        results = self._selmaho(results, selmaho, regexp)
+        results = self._definition(results, definition)
+        results = self._notes(results, notes)
+        return results
+
+    def query(self, query=None, type=None, valsi=None, gloss=None,
+              rafsi=None, selmaho=None, definition=None, notes=None,
+              regexp=False):
+        results = []
+        args = {'gloss': gloss, 'valsi': valsi, 'rafsi': rafsi,
+                'selmaho': selmaho, 'definition': definition, 'notes': notes,
+                'regexp': regexp, 'type': type}
+        if query:
+            order = ['gloss', 'valsi', 'rafsi',
+                     'selmaho', 'definition', 'notes']
+            for arg in order:
+                copyarg = dict(args)
+                copyarg[arg] = query
+                results.extend(self.find(**copyarg))
+            dupes = results
+            results = []
+            [results.append(i) for i in dupes if i not in results]
+            return results
+        else:
+            return self.find(**args)
+
+    def _type(self, inlist, type, regexp):
+        if not type: return inlist
+        if not regexp: type = type.lower()
+        return [i for i in inlist
+                  if regexp and
+                     re.search(type, self[i]['type'], re.IGNORECASE) or
+                     type == self[i]['type']]
+
+    def _valsi(self, inlist, valsi, regexp):
+        if not valsi: return inlist
+        return [i for i in inlist
+                  if regexp and re.search(valsi, i, re.IGNORECASE) or
+                     valsi == i]
+
+    def _gloss(self, inlist, gloss, regexp):
+        if not gloss: return inlist
+        return [v for v in inlist
+                  if any([regexp and
+                          any([re.search(gloss, i, re.IGNORECASE)
+                               for i in [i[0] for i in i]]) or
+                          gloss in [i[0] for i in i]
+                          for i in self[v]['places'].values()])]
+
+    def _rafsi(self, inlist, rafsi, regexp):
+        if not rafsi: return inlist
+        rafsi = rafsi.replace('h', "'")
+        return [i for i in inlist if regexp and
+                                     any([re.search(rafsi, a, re.IGNORECASE)
+                                          for a in self[i]['rafsi']]) or
+                                     rafsi in self[i]['rafsi']]
+
+    def _selmaho(self, inlist, selmaho, regexp):
+        if not selmaho: return inlist
+        if not regexp:
+            selmaho = selmaho.upper().replace('H', 'h')
+        return [i for i in inlist 
+                  if self[i]['selmaho'] and (regexp and
+                     re.search(selmaho, self[i]['selmaho'], re.IGNORECASE) or
+                     self[i]['selmaho'] == selmaho)]
+
+    def _definition(self, inlist, definition):
+        if not definition: return inlist
+        return [i for i in inlist
+                  if re.search(definition,
+                               self[i]['definition'],
+                               re.IGNORECASE)]
+
+    def _notes(self, inlist, notes):
+        if not notes: return inlist
+        return [i for i in inlist
+                  if self[i]['notes'] and
+                     re.search(notes, self[i]['notes'], re.IGNORECASE)]
+
+    def _prettyplace(self, defn):
+        def f(m):
+            res = m.group(1).replace('_', '')
+            return res.replace('{', '').replace('}', '')
+        return re.sub(r'\$(.+?)\$', f, defn.replace('\n', ' '))
+
+    def __getitem__(self, key):
+        return self._db['entries'][key]
+
+    def __iter__(self):
+        return iter(self._db['order'])
+
+
+if __name__ == '__main__':
+    commands = {'find': Find(), 'console': Console(), 'show': Show(),
+                'type': Type(), 'rafsi': Rafsi(),
+                'gloss': Gloss(), 'selmaho': Selmaho(),
+                'definition': Definition(), 'notes': Notes()}
+
+    if len(sys.argv) == 1:
+        print 'Usage: makfa <command> [options]'
+        print
+        print 'Commands:'
+        for command in commands.keys():
+            print '  %s' % command
+
+    elif sys.argv[1] not in commands:
+        similar = [i for i in commands if i.startswith(sys.argv[1])]
+        if not similar:
+            print 'Unknown command.'
+        elif len(similar) > 1:
+            print 'Ambiguous command resolution: %s' % ', '.join(similar)
+        else:
+            try:
+                commands[similar[0]].parse(sys.argv[2:], Dictionary())
+            except:
+                pass
+
+    else:
+        try:
+            commands[sys.argv[1]].parse(sys.argv[2:], Dictionary())
+        except:
+            pass
+
