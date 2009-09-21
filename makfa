@@ -28,10 +28,16 @@ class Find():
                           help='Match against notes by regexp')
         parser.add_option('-R', '--regexp', action='store_true', dest='regexp',
                           help='Match more fields by regexp')
+        parser.add_option('-D', '--show-definition', action='store_true',
+                          dest='show_definition',
+                          help='Show definition of matching entries')
+        parser.add_option('-S', '--show', action='store_true', dest='show',
+                          help='Show all data of matching entries')
         self.parser = parser
 
     def results(self, argv, db):
         (options, args) = self.parser.parse_args(argv)
+        self.options = options
         opts = {'type': options.type, 'valsi': options.valsi,
                 'gloss': options.gloss, 'rafsi': options.rafsi,
                 'selmaho': options.selmaho, 'definition': options.definition,
@@ -40,8 +46,14 @@ class Find():
         return db.query(**opts)
 
     def parse(self, argv, db):
-        for entry in self.results(argv, db):
-            print entry
+        results = self.results(argv, db)
+        if self.options.show:
+            Show().parse(results, db)
+        elif self.options.show_definition:
+            Definition().parse(results, db)
+        else:
+            for entry in results:
+                print entry
 
 
 class Console():
