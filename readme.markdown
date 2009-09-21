@@ -38,6 +38,8 @@ It is script and pipe friendly:
     ro'o : emotion category/modifier: physical - denying physical.
     ro'u : emotion category/modifier: sexual - sexual abstinence.
 
+Alternatively:
+
     $ m g $(m f -sui4)   # makfa gloss $(makfa find --selmaho UI4)
     re'e : "spiritual"
     ro'a : "social"
@@ -45,6 +47,16 @@ It is script and pipe friendly:
     ro'i : "emotional"
     ro'o : "physical"
     ro'u : "sexual"
+
+It provides shortcuts for common combinations:
+
+    $ m f -Dsui4         # makfa find --show-definition --selmaho UI4
+    re'e : emotion category/modifier: religious/spiritual/worship - sacrilege.
+    ro'a : emotion category/modifier: social - antisocial.
+    ro'e : emotion category/modifier: mental - mindless.
+    ro'i : emotion category/modifier: emotional - denying emotion.
+    ro'o : emotion category/modifier: physical - denying physical.
+    ro'u : emotion category/modifier: sexual - sexual abstinence.
 
 If you want to update the dictionary:
 
