@@ -246,6 +246,7 @@ class Dictionary():
 
     def _valsi(self, inlist, valsi, regexp):
         if not valsi: return inlist
+        valsi = valsi.replace('h', "'")
         return [i for i in inlist
                   if regexp and re.search(valsi, i, re.IGNORECASE) or
                      valsi == i]
