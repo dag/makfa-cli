@@ -338,10 +338,10 @@ class Dictionary():
 
 
 if __name__ == '__main__':
-    commands = {'find': Find(), 'console': Console(), 'show': Show(),
-                'references': References(), 'type': Type(), 'rafsi': Rafsi(),
-                'gloss': Gloss(), 'selmaho': Selmaho(),
-                'definition': Definition(), 'notes': Notes()}
+    commands = {'find': Find, 'console': Console, 'show': Show,
+                'references': References, 'type': Type, 'rafsi': Rafsi,
+                'gloss': Gloss, 'selmaho': Selmaho,
+                'definition': Definition, 'notes': Notes}
 
     if len(sys.argv) == 1:
         print 'Usage: makfa <command> [options]'
@@ -358,13 +358,13 @@ if __name__ == '__main__':
             print 'Ambiguous command resolution: %s' % ', '.join(similar)
         else:
             try:
-                commands[similar[0]].parse(sys.argv[2:], Dictionary())
+                commands[similar[0]]().parse(sys.argv[2:], Dictionary())
             except:
                 pass
 
     else:
         try:
-            commands[sys.argv[1]].parse(sys.argv[2:], Dictionary())
+            commands[sys.argv[1]]().parse(sys.argv[2:], Dictionary())
         except:
             pass
 
