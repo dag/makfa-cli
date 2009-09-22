@@ -180,6 +180,7 @@ class Dictionary():
         try:
             self._db = pickle.load(open(path.expanduser('~/.makfa.dump')))
         except:
+            sys.stderr.write('(Fetching dictionary, this may take a minute.)\n')
             db = {'order': [], 'entries': {}}
             url = 'http://jbovlaste.lojban.org/export/xml-export.html?lang=en'
             tree = etree.parse(urllib.urlopen(url))
