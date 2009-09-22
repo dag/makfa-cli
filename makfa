@@ -213,7 +213,7 @@ class Dictionary():
                     db['entries'][word]['places'][place] = []
                 db['entries'][word]['places'][place]. \
                     append((valsi.get('word'), sense))
-            pickle.dump(db, open(path.expanduser('~/.makfa.dump'), 'w'))
+            pickle.dump(db, open(path.expanduser('~/.makfa.dump'), 'w'), -1)
             self._db = db
 
     def find(self, type=None, valsi=None, gloss=None, rafsi=None,
