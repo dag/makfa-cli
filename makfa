@@ -100,7 +100,8 @@ class Command():
         if options.quiet:
             print db[entry][self.name].encode('utf-8')
         else:
-            print '%s : %s' % (entry, db[entry][self.name].encode('utf-8'))
+            print ' %s%s : %s' % (' ' * (db._longest-len(entry)), entry,
+                                  (db[entry][self.name] or '').encode('utf-8'))
 
 
 class Show(Command):
@@ -112,17 +113,19 @@ class Show(Command):
         meta = [db[entry]['type'],
                 db[entry]['selmaho'],
                 ', '.join(['-%s-' % r for r in db[entry]['rafsi']])]
-        print '%s : %s' % (entry, ' '.join([i for i in meta if i]))
+        print ' %s%s : %s' % (' ' * (db._longest-len(entry)),
+                             entry, ' '.join([i for i in meta if i]))
         defn = db[entry]['definition'].encode('utf-8')
-        print '%s : %s' % (' ' * len(entry), defn)
+        print ' %s : %s' % (' ' * db._longest, defn)
         for place in db[entry]['places']:
             places = [('"%s" in the sense of "%s"' % i if i[1] else
                        '"%s"' % i[0])
                       for i in db[entry]['places'][place]]
-            print '%s : (x%d) %s' % (' ' * len(entry), place, ', '.join(places))
+            print ' %s : (x%d) %s' % (' ' * db._longest, place,
+                                      ', '.join(places).encode('utf-8'))
         if db[entry]['notes']:
             notes = db[entry]['notes'].encode('utf-8')
-            print '%s : %s' % (' ' * len(entry), notes)
+            print ' %s : %s' % (' ' * db._longest, notes)
         print
 
 
@@ -145,12 +148,13 @@ class Gloss(Command):
                 places = [('"%s" in the sense of "%s"' % i if i[1] else
                            '"%s"' % i[0])
                           for i in db[entry]['places'][options.place]]
-                print '%s : %s' % (entry, ', '.join(places))
+                print ' %s%s : %s' % (' ' * (db._longest-len(entry)),
+                                      entry, ', '.join(places).encode('utf-8'))
         else:
             if options.quiet:
                 print
             else:
-                print '%s : ' % entry
+                print ' %s%s : ' % (' ' * (db._longest-len(entry)), entry)
 
 
 class Rafsi(Command):
@@ -159,7 +163,8 @@ class Rafsi(Command):
             print ' '.join(db[entry]['rafsi'])
         else:
             rafsi = ['-%s-' % r for r in db[entry]['rafsi']]
-            print '%s : %s' % (entry, ', '.join(rafsi))
+            print ' %s%s : %s' % (' ' * (db._longest-len(entry)),
+                                  entry, ', '.join(rafsi))
 
 
 class Selmaho(Command):
@@ -216,6 +221,7 @@ class Dictionary():
                     append((valsi.get('word'), sense))
             pickle.dump(db, open(path.expanduser('~/.makfa.dump'), 'w'), -1)
             self._db = db
+        self._longest = sorted([len(i) for i in self._db['order']])[-1]
 
     def find(self, type=None, valsi=None, gloss=None, rafsi=None,
              selmaho=None, definition=None, notes=None, regexp=False):
