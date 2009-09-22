@@ -98,7 +98,8 @@ class Command():
 
     def output(self, entry, db, options):
         if options.quiet:
-            print db[entry][self.name].encode('utf-8')
+            if db[entry][self.name]:
+                print db[entry][self.name].encode('utf-8')
         else:
             print ' %s%s : %s' % (' ' * (db._longest-len(entry)), entry,
                                   (db[entry][self.name] or '').encode('utf-8'))
