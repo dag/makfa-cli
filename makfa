@@ -105,6 +105,19 @@ class Command():
                                   (db[entry][self.name] or '').encode('utf-8'))
 
 
+class References(Command):
+
+    def output(self, entry, db, options):
+        if db[entry]['notes']:
+            refs = re.findall(r'\{(.+?)\}', db[entry]['notes'])
+            if options.quiet:
+                for cf in refs:
+                    print cf
+            else:
+                print ' %s%s : %s' % (' ' * (db._longest-len(entry)), entry,
+                                      ' '.join(refs))
+
+
 class Show(Command):
 
     def __init__(self):
@@ -326,7 +339,7 @@ class Dictionary():
 
 if __name__ == '__main__':
     commands = {'find': Find(), 'console': Console(), 'show': Show(),
-                'type': Type(), 'rafsi': Rafsi(),
+                'references': References(), 'type': Type(), 'rafsi': Rafsi(),
                 'gloss': Gloss(), 'selmaho': Selmaho(),
                 'definition': Definition(), 'notes': Notes()}
 
