@@ -47,13 +47,14 @@ class Find():
 
     def parse(self, argv, db):
         results = self.results(argv, db)
-        if self.options.show:
-            Show().parse(results, db)
-        elif self.options.show_definition:
-            Definition().parse(results, db)
-        else:
-            for entry in results:
-                print entry
+        if results:
+            if self.options.show:
+                Show().parse(results, db)
+            elif self.options.show_definition:
+                Definition().parse(results, db)
+            else:
+                for entry in results:
+                    print entry
 
 
 class Console():
