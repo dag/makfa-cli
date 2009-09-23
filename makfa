@@ -134,9 +134,11 @@ _refgram = {'A': [(14, 6)],
 
 
 class Find():
+    """Search for entries."""
 
     def __init__(self):
-        parser = OptionParser(usage='makfa find [options] [query]')
+        parser = OptionParser(usage='makfa find [options] [query]',
+                              description=self.__class__.__doc__)
         parser.add_option('-t', '--type', dest='type', help='Type of word')
         parser.add_option('-v', '--valsi', dest='valsi',
                           help='Match entry name')
@@ -182,9 +184,11 @@ class Find():
 
 
 class Console():
+    """Prompt for search queries and show full results."""
 
     def __init__(self):
-        self.parser = OptionParser(usage='makfa console')
+        self.parser = OptionParser(usage='makfa console',
+                                   description=self.__class__.__doc__)
 
     def parse(self, argv, db):
         self.parser.parse_args(argv)
@@ -203,7 +207,8 @@ class Command():
 
     def __init__(self):
         self.name = self.__class__.__name__.lower()
-        self.parser = OptionParser(usage='makfa %s [entries]' % self.name)
+        self.parser = OptionParser(usage='makfa %s [entries]' % self.name,
+                                   description=self.__class__.__doc__)
         self.parser.add_option('-q', '--quiet', action='store_true',
                                dest='quiet', help='Pipe friendly output')
 
@@ -230,6 +235,7 @@ class Command():
 
 
 class References(Command):
+    """List entries referenced in entries."""
 
     def output(self, entry, db, options):
         if db[entry]['notes']:
@@ -243,9 +249,11 @@ class References(Command):
 
 
 class Show(Command):
+    """Show all information for entries."""
 
     def __init__(self):
-        self.parser = OptionParser(usage='makfa show [entries]')
+        self.parser = OptionParser(usage='makfa show [entries]',
+                                   description=self.__class__.__doc__)
 
     def output(self, entry, db, options):
         meta = [db[entry]['type'],
@@ -274,10 +282,11 @@ class Show(Command):
 
 
 class Type(Command):
-    pass
+    """Show what type entries are."""
 
 
 class Gloss(Command):
+    """Show glosses and place keywords for entries."""
 
     def __init__(self):
         Command.__init__(self)
@@ -302,6 +311,8 @@ class Gloss(Command):
 
 
 class Rafsi(Command):
+    """Show affix forms of entries."""
+
     def output(self, entry, db, options):
         if options.quiet:
             print ' '.join(db[entry]['rafsi'])
@@ -312,6 +323,7 @@ class Rafsi(Command):
 
 
 class Selmaho(Command):
+    """Show grammatical classes of entries."""
 
     def output(self, entry, db, options):
         if options.quiet:
@@ -330,11 +342,11 @@ class Selmaho(Command):
 
 
 class Definition(Command):
-    pass
+    """Show entry definitions."""
 
 
 class Notes(Command):
-    pass
+    """Show notes of entries."""
 
 
 class Dictionary():
@@ -487,12 +499,18 @@ if __name__ == '__main__':
                 'gloss': Gloss, 'selmaho': Selmaho,
                 'definition': Definition, 'notes': Notes}
 
-    if len(sys.argv) == 1:
+    helps = ['help', 'commands', '-h', '--help']
+    if len(sys.argv) == 1 or any([sys.argv[1] == h for h in helps]):
         print 'Usage: makfa <command> [options]'
         print
+        print 'Lojban dictionary.'
+        print
         print 'Commands:'
-        for command in commands.keys():
-            print '  %s' % command
+        print
+        for command in sorted(commands.keys()):
+            print '  %s%s  %s' % (' ' * (10-len(command)), command,
+                                commands[command].__doc__ or '')
+        print
 
     elif sys.argv[1] not in commands:
         similar = [i for i in commands if i.startswith(sys.argv[1])]
