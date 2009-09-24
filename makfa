@@ -164,12 +164,27 @@ class Find():
     def results(self, argv, db):
         (options, args) = self.parser.parse_args(argv)
         self.options = options
-        opts = {'type': options.type, 'valsi': options.valsi,
-                'gloss': options.gloss, 'rafsi': options.rafsi,
-                'selmaho': options.selmaho, 'definition': options.definition,
-                'notes': options.notes, 'regexp': options.regexp,
-                'query': ' '.join(args)}
-        return db.query(**opts)
+        filter = Filter(db)
+        if args:
+            filter.results = []
+            query, regexp = ' '.join(args), options.regexp
+            filter.results.extend(Filter(db).gloss(query, regexp).results)
+            filter.results.extend(Filter(db).valsi(query, regexp).results)
+            filter.results.extend(Filter(db).rafsi(query, regexp).results)
+            filter.results.extend(Filter(db).selmaho(query, regexp).results)
+            filter.results.extend(Filter(db).definition(query, True).results)
+            filter.results.extend(Filter(db).notes(query, True).results)
+            uniq = []
+            [uniq.append(i) for i in filter.results if i not in uniq]
+            filter.results = uniq
+        filter.definition(options.definition, True)
+        filter.gloss(options.gloss, options.regexp)
+        filter.notes(options.notes, True)
+        filter.rafsi(options.rafsi, options.regexp)
+        filter.selmaho(options.selmaho, options.regexp)
+        filter.type(options.type, options.regexp)
+        filter.valsi(options.valsi, options.regexp)
+        return filter.results
 
     def parse(self, argv, db):
         results = self.results(argv, db)
@@ -238,14 +253,13 @@ class References(Command):
     """List entries referenced in entries."""
 
     def output(self, entry, db, options):
-        if db[entry]['notes']:
-            refs = re.findall(r'\{(.+?)\}', db[entry]['notes'])
-            if options.quiet:
-                for cf in refs:
-                    print cf
-            else:
-                print ' %s%s : %s' % (' ' * (db._longest-len(entry)), entry,
-                                      ' '.join(refs))
+        refs = re.findall(r'\{(.+?)\}', db.notes(entry))
+        if options.quiet:
+            for cf in refs:
+                print cf
+        else:
+            print ' %s%s : %s' % (' ' * (db._longest-len(entry)), entry,
+                                  ' '.join(refs))
 
 
 class Show(Command):
@@ -256,28 +270,26 @@ class Show(Command):
                                    description=self.__class__.__doc__)
 
     def output(self, entry, db, options):
-        meta = [db[entry]['type'],
-                db[entry]['selmaho'],
-                ', '.join(['-%s-' % r for r in db[entry]['rafsi']])]
+        meta = [db.type(entry),
+                db.selmaho(entry),
+                ', '.join(['-%s-' % r for r in db.rafsi(entry)])]
         print ' %s%s : %s' % (' ' * (db._longest-len(entry)),
                              entry, ' '.join([i for i in meta if i]))
-        defn = db[entry]['definition'].encode('utf-8')
-        print ' %s : %s' % (' ' * db._longest, defn)
-        for place in db[entry]['places']:
+        print ' %s : %s' % (' ' * db._longest, db.definition(entry))
+        for place in db.glosses(entry):
             places = [('"%s" in the sense of "%s"' % i if i[1] else
                        '"%s"' % i[0])
-                      for i in db[entry]['places'][place]]
+                      for i in db.glosses(entry)[place]]
             print ' %s : (x%d) %s' % (' ' * db._longest, place,
                                       ', '.join(places).encode('utf-8'))
-        if db[entry]['selmaho']:
-            selmaho = re.search(r'^([a-zA-Z]+)', db[entry]['selmaho']).group(1)
+        if db.selmaho(entry):
+            selmaho = re.search(r'^([a-zA-Z]+)', db.selmaho(entry)).group(1)
             if selmaho in _refgram:
                 urls = ['<http://dag.github.com/cll/%s/%s/>' % i
                         for i in _refgram[selmaho]]
                 print ' %s : %s' % (' ' * db._longest, ', '.join(urls))
-        if db[entry]['notes']:
-            notes = db[entry]['notes'].encode('utf-8')
-            print ' %s : %s' % (' ' * db._longest, notes)
+        if db.notes(entry):
+            print ' %s : %s' % (' ' * db._longest, db.notes(entry))
         print
 
 
@@ -294,13 +306,13 @@ class Gloss(Command):
                                dest='place', help='Gloss word place')
 
     def output(self, entry, db, options):
-        if options.place in db[entry]['places']:
+        if options.place in db.glosses(entry):
             if options.quiet:
-                print db[entry]['places'][options.place][0][0]
+                print db.glosses(entry)[options.place][0][0]
             else:
                 places = [('"%s" in the sense of "%s"' % i if i[1] else
                            '"%s"' % i[0])
-                          for i in db[entry]['places'][options.place]]
+                          for i in db.glosses(entry)[options.place]]
                 print ' %s%s : %s' % (' ' * (db._longest-len(entry)),
                                       entry, ', '.join(places).encode('utf-8'))
         else:
@@ -315,9 +327,9 @@ class Rafsi(Command):
 
     def output(self, entry, db, options):
         if options.quiet:
-            print ' '.join(db[entry]['rafsi'])
+            print ' '.join(db.rafsi(entry))
         else:
-            rafsi = ['-%s-' % r for r in db[entry]['rafsi']]
+            rafsi = ['-%s-' % r for r in db.rafsi(entry)]
             print ' %s%s : %s' % (' ' * (db._longest-len(entry)),
                                   entry, ', '.join(rafsi))
 
@@ -327,18 +339,15 @@ class Selmaho(Command):
 
     def output(self, entry, db, options):
         if options.quiet:
-            if db[entry]['selmaho']:
-                print db[entry]['selmaho']
+            print db.selmaho(entry)
         else:
             urls = []
-            if db[entry]['selmaho']:
-                selmaho = re.search(r'^([a-zA-Z]+)', db[entry]['selmaho']).group(1)
-                if selmaho in _refgram:
-                    urls = ['<http://dag.github.com/cll/%s/%s/>' % i
-                            for i in _refgram[selmaho]]
+            selmaho = re.search(r'^([a-zA-Z]+)', db.selmaho(entry))
+            if selmaho and selmaho.group(1) in _refgram:
+                urls = ['<http://dag.github.com/cll/%s/%s/>' % i
+                        for i in _refgram[selmaho.group(1)]]
             print ' %s%s : %s %s' % (' ' * (db._longest-len(entry)), entry,
-                                     db[entry][self.name] or '',
-                                     ', '.join(urls))
+                                     db.selmaho(entry), ', '.join(urls))
 
 
 class Definition(Command):
@@ -347,6 +356,69 @@ class Definition(Command):
 
 class Notes(Command):
     """Show notes of entries."""
+
+
+class Filter():
+
+    def __init__(self, db):
+        self._db = db
+        self.results = list(db)
+
+    def pattern(method):
+        def f(self, pattern=None, regexp=False):
+            if pattern:
+                if regexp:
+                    pattern = re.compile(pattern, re.IGNORECASE)
+                self.results = [i for i in self.results
+                                  if method(self, i, pattern)]
+            return self
+        return f
+
+    @pattern
+    def definition(self, entry, pattern):
+        return pattern.search(self._db.definition(entry))
+
+    @pattern
+    def gloss(self, entry, pattern):
+        for place in self._db.glosses(entry).values():
+            for keyword in place:
+                if isinstance(pattern, basestring):
+                    if pattern == keyword[0]:
+                        return True
+                elif pattern.search(keyword[0]):
+                    return True
+
+    @pattern
+    def notes(self, entry, pattern):
+        return pattern.search(self._db.notes(entry))
+
+    @pattern
+    def rafsi(self, entry, pattern):
+        if isinstance(pattern, basestring):
+            return pattern.replace('h', "'") in self._db.rafsi(entry)
+        else:
+            return any([pattern.search(i) for i in self._db.rafsi(entry)])
+
+    @pattern
+    def selmaho(self, entry, pattern):
+        if isinstance(pattern, basestring):
+            return pattern.upper() == self._db.selmaho(entry).upper()
+        else:
+            return pattern.search(self._db.selmaho(entry) or '')
+
+    @pattern
+    def type(self, entry, pattern):
+        if isinstance(pattern, basestring):
+            return pattern == self._db.type(entry)
+        else:
+            return pattern.search(self._db.type(entry))
+
+    @pattern
+    def valsi(self, entry, pattern):
+        if isinstance(pattern, basestring):
+            return pattern.replace('h', "'") == entry
+        else:
+            return pattern.search(entry)
 
 
 class Dictionary():
@@ -393,92 +465,23 @@ class Dictionary():
             self._db = db
         self._longest = sorted([len(i) for i in self._db['order']])[-1]
 
-    def find(self, type=None, valsi=None, gloss=None, rafsi=None,
-             selmaho=None, definition=None, notes=None, regexp=False):
-        results = self._db['order']
-        results = self._type(results, type, regexp)
-        results = self._valsi(results, valsi, regexp)
-        results = self._gloss(results, gloss, regexp)
-        results = self._rafsi(results, rafsi, regexp)
-        results = self._selmaho(results, selmaho, regexp)
-        results = self._definition(results, definition)
-        results = self._notes(results, notes)
-        return results
+    def definition(self, entry):
+        return self[entry]['definition'].encode('utf-8')
 
-    def query(self, query=None, type=None, valsi=None, gloss=None,
-              rafsi=None, selmaho=None, definition=None, notes=None,
-              regexp=False):
-        results = []
-        args = {'gloss': gloss, 'valsi': valsi, 'rafsi': rafsi,
-                'selmaho': selmaho, 'definition': definition, 'notes': notes,
-                'regexp': regexp, 'type': type}
-        if query:
-            order = ['gloss', 'valsi', 'rafsi',
-                     'selmaho', 'definition', 'notes']
-            for arg in order:
-                copyarg = dict(args)
-                copyarg[arg] = query
-                results.extend(self.find(**copyarg))
-            dupes = results
-            results = []
-            [results.append(i) for i in dupes if i not in results]
-            return results
-        else:
-            return self.find(**args)
+    def glosses(self, entry):
+        return self[entry]['places']
 
-    def _type(self, inlist, type, regexp):
-        if not type: return inlist
-        if not regexp: type = type.lower()
-        return [i for i in inlist
-                  if regexp and
-                     re.search(type, self[i]['type'], re.IGNORECASE) or
-                     type == self[i]['type']]
+    def notes(self, entry):
+        return (self[entry]['notes'] or '').encode('utf-8')
 
-    def _valsi(self, inlist, valsi, regexp):
-        if not valsi: return inlist
-        valsi = valsi.replace('h', "'")
-        return [i for i in inlist
-                  if regexp and re.search(valsi, i, re.IGNORECASE) or
-                     valsi == i]
+    def rafsi(self, entry):
+        return self[entry]['rafsi']
 
-    def _gloss(self, inlist, gloss, regexp):
-        if not gloss: return inlist
-        return [v for v in inlist
-                  if any([regexp and
-                          any([re.search(gloss, i, re.IGNORECASE)
-                               for i in [i[0] for i in i]]) or
-                          gloss in [i[0] for i in i]
-                          for i in self[v]['places'].values()])]
+    def selmaho(self, entry):
+        return self[entry]['selmaho'] or ''
 
-    def _rafsi(self, inlist, rafsi, regexp):
-        if not rafsi: return inlist
-        rafsi = rafsi.replace('h', "'")
-        return [i for i in inlist if regexp and
-                                     any([re.search(rafsi, a, re.IGNORECASE)
-                                          for a in self[i]['rafsi']]) or
-                                     rafsi in self[i]['rafsi']]
-
-    def _selmaho(self, inlist, selmaho, regexp):
-        if not selmaho: return inlist
-        if not regexp:
-            selmaho = selmaho.upper().replace('H', 'h')
-        return [i for i in inlist 
-                  if self[i]['selmaho'] and (regexp and
-                     re.search(selmaho, self[i]['selmaho'], re.IGNORECASE) or
-                     self[i]['selmaho'] == selmaho)]
-
-    def _definition(self, inlist, definition):
-        if not definition: return inlist
-        return [i for i in inlist
-                  if re.search(definition,
-                               self[i]['definition'],
-                               re.IGNORECASE)]
-
-    def _notes(self, inlist, notes):
-        if not notes: return inlist
-        return [i for i in inlist
-                  if self[i]['notes'] and
-                     re.search(notes, self[i]['notes'], re.IGNORECASE)]
+    def type(self, entry):
+        return self[entry]['type']
 
     def _prettyplace(self, defn):
         def f(m):
