@@ -434,29 +434,25 @@ class Filter():
             if len(pattern) == 4:
                 return self._db.type(entry) == 'gismu' and entry[0:4] == pattern
             return pattern.replace('h', "'") in self._db.rafsi(entry)
-        else:
-            return any([pattern.search(i) for i in self._db.rafsi(entry)])
+        return any([pattern.search(i) for i in self._db.rafsi(entry)])
 
     @pattern
     def selmaho(self, entry, pattern):
         if isinstance(pattern, basestring):
             return pattern.upper() == self._db.selmaho(entry).upper()
-        else:
-            return pattern.search(self._db.selmaho(entry) or '')
+        return pattern.search(self._db.selmaho(entry) or '')
 
     @pattern
     def type(self, entry, pattern):
         if isinstance(pattern, basestring):
             return pattern == self._db.type(entry)
-        else:
-            return pattern.search(self._db.type(entry))
+        return pattern.search(self._db.type(entry))
 
     @pattern
     def valsi(self, entry, pattern):
         if isinstance(pattern, basestring):
             return pattern.replace('h', "'") == entry
-        else:
-            return pattern.search(entry)
+        return pattern.search(entry)
 
 
 class Dictionary():
