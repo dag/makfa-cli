@@ -210,12 +210,16 @@ class Console():
         import readline
         finder = Find()
         shower = Show()
-        while True:
-            input = raw_input('?- ').split()
-            results = finder.results(input, db)
-            results.reverse()
-            if results:
-                shower.parse(results, db)
+        try:
+            while True:
+                input = raw_input('?- ').split()
+                results = finder.results(input, db)
+                results.reverse()
+                if results:
+                    shower.parse(results, db)
+        except (KeyboardInterrupt, EOFError):
+            print
+            print '% halt'
 
 
 class Formatter():
@@ -511,6 +515,11 @@ class Dictionary():
     def __iter__(self):
         return iter(self._db['order'])
 
+def main(command, args):
+    try:
+        command.parse(args, Dictionary())
+    except (KeyboardInterrupt, EOFError):
+        pass
 
 if __name__ == '__main__':
     commands = {'find': Find, 'console': Console, 'show': Show,
@@ -538,14 +547,7 @@ if __name__ == '__main__':
         elif len(similar) > 1:
             print 'Ambiguous command resolution: %s' % ', '.join(similar)
         else:
-            try:
-                commands[similar[0]]().parse(sys.argv[2:], Dictionary())
-            except:
-                pass
+            main(commands[similar[0]](), sys.argv[2:])
 
     else:
-        try:
-            commands[sys.argv[1]]().parse(sys.argv[2:], Dictionary())
-        except:
-            pass
-
+        main(commands[sys.argv[1]](), sys.argv[2:])
