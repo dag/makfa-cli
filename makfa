@@ -9,6 +9,10 @@ import urllib
 import xml.etree.cElementTree as etree
 
 
+
+# --- Data ---
+
+
 _refgram = {'A': [(14, 6)],
             'BAI': [(9, 6)],
             'BAhE': [(19, 11)],
@@ -133,93 +137,8 @@ _refgram = {'A': [(14, 6)],
             'ZOhU': [(16, 2), (19, 4)]}
 
 
-class Find():
-    """Search for entries."""
 
-    def __init__(self):
-        parser = OptionParser(usage='makfa find [options] [query]',
-                              description=self.__class__.__doc__)
-        parser.add_option('-t', '--type', dest='type', help='Type of word')
-        parser.add_option('-v', '--valsi', dest='valsi',
-                          help='Match entry name')
-        parser.add_option('-g', '--gloss', dest='gloss',
-                          help='Match against gloss words')
-        parser.add_option('-r', '--rafsi', dest='rafsi',
-                          help='Match against rafsi affixes')
-        parser.add_option('-s', '--selmaho', dest='selmaho',
-                          help='Match against selmaho grammatical class')
-        parser.add_option('-d', '--definition', dest='definition',
-                          help='Match against definitions by regexp')
-        parser.add_option('-n', '--notes', dest='notes',
-                          help='Match against notes by regexp')
-        parser.add_option('-R', '--regexp', action='store_true', dest='regexp',
-                          help='Match more fields by regexp')
-        parser.add_option('-D', '--show-definition', action='store_true',
-                          dest='show_definition',
-                          help='Show definition of matching entries')
-        parser.add_option('-S', '--show', action='store_true', dest='show',
-                          help='Show all data of matching entries')
-        self.parser = parser
-
-    def results(self, argv, db):
-        (options, args) = self.parser.parse_args(argv)
-        self.options = options
-        filter = Filter(db)
-        if args:
-            filter.results = []
-            query, regexp = ' '.join(args), options.regexp
-            filter.results.extend(Filter(db).gloss(query, regexp).results)
-            filter.results.extend(Filter(db).valsi(query, regexp).results)
-            filter.results.extend(Filter(db).rafsi(query, regexp).results)
-            filter.results.extend(Filter(db).selmaho(query, regexp).results)
-            filter.results.extend(Filter(db).definition(query, True).results)
-            filter.results.extend(Filter(db).notes(query, True).results)
-            uniq = []
-            [uniq.append(i) for i in filter.results if i not in uniq]
-            filter.results = uniq
-        filter.definition(options.definition, True)
-        filter.gloss(options.gloss, options.regexp)
-        filter.notes(options.notes, True)
-        filter.rafsi(options.rafsi, options.regexp)
-        filter.selmaho(options.selmaho, options.regexp)
-        filter.type(options.type, options.regexp)
-        filter.valsi(options.valsi, options.regexp)
-        return filter.results
-
-    def parse(self, argv, db):
-        results = self.results(argv, db)
-        if results:
-            if self.options.show:
-                Show().parse(results, db)
-            elif self.options.show_definition:
-                Definition().parse(results, db)
-            else:
-                for entry in results:
-                    print entry
-
-
-class Console():
-    """Prompt for search queries and show full results."""
-
-    def __init__(self):
-        self.parser = OptionParser(usage='makfa console',
-                                   description=self.__class__.__doc__)
-
-    def parse(self, argv, db):
-        self.parser.parse_args(argv)
-        import readline
-        finder = Find()
-        shower = Show()
-        try:
-            while True:
-                input = raw_input('?- ').split()
-                results = finder.results(input, db)
-                results.reverse()
-                if results:
-                    shower.parse(results, db)
-        except (KeyboardInterrupt, EOFError):
-            print
-            print '% halt'
+# --- CLI helpers ---
 
 
 class Formatter():
@@ -295,16 +214,73 @@ class Command():
             self.formatter.write(entry, data)
 
 
-class References(Command):
-    """List entries referenced in entries."""
 
-    def output(self, entry, db, options):
-        refs = re.findall(r'\{(.+?)\}', db.notes(entry))
-        if options.quiet:
-            for cf in refs:
-                print cf
-        else:
-            self.formatter.write(entry, ' '.join(refs))
+# --- Commands ---
+
+
+class Find():
+    """Search for entries."""
+
+    def __init__(self):
+        parser = OptionParser(usage='makfa find [options] [query]',
+                              description=self.__class__.__doc__)
+        parser.add_option('-t', '--type', dest='type', help='Type of word')
+        parser.add_option('-v', '--valsi', dest='valsi',
+                          help='Match entry name')
+        parser.add_option('-g', '--gloss', dest='gloss',
+                          help='Match against gloss words')
+        parser.add_option('-r', '--rafsi', dest='rafsi',
+                          help='Match against rafsi affixes')
+        parser.add_option('-s', '--selmaho', dest='selmaho',
+                          help='Match against selmaho grammatical class')
+        parser.add_option('-d', '--definition', dest='definition',
+                          help='Match against definitions by regexp')
+        parser.add_option('-n', '--notes', dest='notes',
+                          help='Match against notes by regexp')
+        parser.add_option('-R', '--regexp', action='store_true', dest='regexp',
+                          help='Match more fields by regexp')
+        parser.add_option('-D', '--show-definition', action='store_true',
+                          dest='show_definition',
+                          help='Show definition of matching entries')
+        parser.add_option('-S', '--show', action='store_true', dest='show',
+                          help='Show all data of matching entries')
+        self.parser = parser
+
+    def results(self, argv, db):
+        (options, args) = self.parser.parse_args(argv)
+        self.options = options
+        filter = Filter(db)
+        if args:
+            filter.results = []
+            query, regexp = ' '.join(args), options.regexp
+            filter.results.extend(Filter(db).gloss(query, regexp).results)
+            filter.results.extend(Filter(db).valsi(query, regexp).results)
+            filter.results.extend(Filter(db).rafsi(query, regexp).results)
+            filter.results.extend(Filter(db).selmaho(query, regexp).results)
+            filter.results.extend(Filter(db).definition(query, True).results)
+            filter.results.extend(Filter(db).notes(query, True).results)
+            uniq = []
+            [uniq.append(i) for i in filter.results if i not in uniq]
+            filter.results = uniq
+        filter.definition(options.definition, True)
+        filter.gloss(options.gloss, options.regexp)
+        filter.notes(options.notes, True)
+        filter.rafsi(options.rafsi, options.regexp)
+        filter.selmaho(options.selmaho, options.regexp)
+        filter.type(options.type, options.regexp)
+        filter.valsi(options.valsi, options.regexp)
+        return filter.results
+
+    def parse(self, argv, db):
+        results = self.results(argv, db)
+        if results:
+            if self.options.show:
+                Show().parse(results, db)
+            elif self.options.show_definition:
+                Definition().parse(results, db)
+            else:
+                for entry in results:
+                    print entry
 
 
 class Show(Command):
@@ -326,8 +302,32 @@ class Show(Command):
             self.formatter.write(entry, db.notes(entry))
 
 
-class Type(Command):
-    """Show what type entries are."""
+class Console():
+    """Prompt for search queries and show full results."""
+
+    def __init__(self):
+        self.parser = OptionParser(usage='makfa console',
+                                   description=self.__class__.__doc__)
+
+    def parse(self, argv, db):
+        self.parser.parse_args(argv)
+        import readline
+        finder = Find()
+        shower = Show()
+        try:
+            while True:
+                input = raw_input('?- ').split()
+                results = finder.results(input, db)
+                results.reverse()
+                if results:
+                    shower.parse(results, db)
+        except (KeyboardInterrupt, EOFError):
+            print
+            print '% halt'
+
+
+class Definition(Command):
+    """Show entry definitions."""
 
 
 class Gloss(Command):
@@ -349,6 +349,10 @@ class Gloss(Command):
             self.formatter.write(entry, data)
 
 
+class Notes(Command):
+    """Show notes of entries."""
+
+
 class Rafsi(Command):
     """Show affix forms of entries."""
 
@@ -357,6 +361,18 @@ class Rafsi(Command):
             print ' '.join(db.rafsi(entry))
         else:
             self.formatter.write(entry, self.formatter.rafsi(entry))
+
+
+class References(Command):
+    """List entries referenced in entries."""
+
+    def output(self, entry, db, options):
+        refs = re.findall(r'\{(.+?)\}', db.notes(entry))
+        if options.quiet:
+            for cf in refs:
+                print cf
+        else:
+            self.formatter.write(entry, ' '.join(refs))
 
 
 class Selmaho(Command):
@@ -370,12 +386,12 @@ class Selmaho(Command):
             self.formatter.write(entry, ' '.join(data))
 
 
-class Definition(Command):
-    """Show entry definitions."""
+class Type(Command):
+    """Show what type entries are."""
 
 
-class Notes(Command):
-    """Show notes of entries."""
+
+# --- Dictionary API ---
 
 
 class Filter():
@@ -515,17 +531,29 @@ class Dictionary():
     def __iter__(self):
         return iter(self._db['order'])
 
+
+
+# --- Execution ---
+
+
 def main(command, args):
     try:
         command.parse(args, Dictionary())
     except (KeyboardInterrupt, EOFError):
         pass
 
+
 if __name__ == '__main__':
-    commands = {'find': Find, 'console': Console, 'show': Show,
-                'references': References, 'type': Type, 'rafsi': Rafsi,
-                'gloss': Gloss, 'selmaho': Selmaho,
-                'definition': Definition, 'notes': Notes}
+    commands = {'find': Find,
+                'show': Show,
+                'console': Console,
+                'definition': Definition,
+                'gloss': Gloss,
+                'notes': Notes,
+                'rafsi': Rafsi,
+                'references': References,
+                'selmaho': Selmaho,
+                'type': Type}
 
     helps = ['help', 'commands', '-h', '--help']
     if len(sys.argv) == 1 or any([sys.argv[1] == h for h in helps]):
