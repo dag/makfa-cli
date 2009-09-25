@@ -211,7 +211,7 @@ class Console():
         finder = Find()
         shower = Show()
         while True:
-            input = raw_input('> ').split()
+            input = raw_input('?- ').split()
             results = finder.results(input, db)
             results.reverse()
             if results:
