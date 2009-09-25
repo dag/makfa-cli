@@ -218,6 +218,47 @@ class Console():
                 shower.parse(results, db)
 
 
+class Formatter():
+
+    def __init__(self, db):
+        self._db = db
+        self._last = None
+        self._multi = False
+
+    def write(self, entry, data=''):
+        if not entry == self._last:
+            if self._multi and self._last:
+                self._multi = False
+                print
+            print ' %s%s : %s' % (' ' * (self._db._longest-len(entry)),
+                                  entry, data)
+        else:
+            self._multi = True
+            print ' %s : %s' % (' ' * self._db._longest, data)
+        self._last = entry
+
+    def glosses(self, entry, place=1):
+        if place in self._db.glosses(entry):
+            keywords = [('"%s" in the sense of "%s"' % i if i[1] else
+                         '"%s"' % i[0])
+                        for i in self._db.glosses(entry)[place]]
+            return '(x%d) %s' % (place, ', '.join(keywords).encode('utf-8'))
+        return ''
+
+    def refgrams(self, entry):
+        selmaho = self._db.selmaho(entry)
+        if selmaho:
+            pure = re.search(r'^([a-zA-Z]+)', selmaho).group(1)
+            if pure in _refgram:
+                urls = ['<http://dag.github.com/cll/%s/%s/>' % i
+                        for i in _refgram[pure]]
+                return ', '.join(urls)
+        return ''
+
+    def rafsi(self, entry):
+        return ', '.join(['-%s-' % r for r in self._db.rafsi(entry)])
+
+
 class Command():
 
     def __init__(self):
@@ -228,6 +269,7 @@ class Command():
                                dest='quiet', help='Pipe friendly output')
 
     def parse(self, argv, db):
+        self.formatter = Formatter(db)
         (options, args) = self.parser.parse_args(argv)
         if args:
             for entry in args:
@@ -245,8 +287,8 @@ class Command():
             if db[entry][self.name]:
                 print db[entry][self.name].encode('utf-8')
         else:
-            print ' %s%s : %s' % (' ' * (db._longest-len(entry)), entry,
-                                  (db[entry][self.name] or '').encode('utf-8'))
+            data = (db[entry][self.name] or '').encode('utf-8')
+            self.formatter.write(entry, data)
 
 
 class References(Command):
@@ -258,8 +300,7 @@ class References(Command):
             for cf in refs:
                 print cf
         else:
-            print ' %s%s : %s' % (' ' * (db._longest-len(entry)), entry,
-                                  ' '.join(refs))
+            self.formatter.write(entry, ' '.join(refs))
 
 
 class Show(Command):
@@ -270,27 +311,15 @@ class Show(Command):
                                    description=self.__class__.__doc__)
 
     def output(self, entry, db, options):
-        meta = [db.type(entry),
-                db.selmaho(entry),
-                ', '.join(['-%s-' % r for r in db.rafsi(entry)])]
-        print ' %s%s : %s' % (' ' * (db._longest-len(entry)),
-                             entry, ' '.join([i for i in meta if i]))
-        print ' %s : %s' % (' ' * db._longest, db.definition(entry))
+        meta = [db.type(entry), db.selmaho(entry), self.formatter.rafsi(entry)]
+        self.formatter.write(entry, ' '.join([i for i in meta if i]))
+        self.formatter.write(entry, db.definition(entry))
         for place in db.glosses(entry):
-            places = [('"%s" in the sense of "%s"' % i if i[1] else
-                       '"%s"' % i[0])
-                      for i in db.glosses(entry)[place]]
-            print ' %s : (x%d) %s' % (' ' * db._longest, place,
-                                      ', '.join(places).encode('utf-8'))
-        if db.selmaho(entry):
-            selmaho = re.search(r'^([a-zA-Z]+)', db.selmaho(entry)).group(1)
-            if selmaho in _refgram:
-                urls = ['<http://dag.github.com/cll/%s/%s/>' % i
-                        for i in _refgram[selmaho]]
-                print ' %s : %s' % (' ' * db._longest, ', '.join(urls))
+            self.formatter.write(entry, self.formatter.glosses(entry, place))
+        if self.formatter.refgrams(entry):
+            self.formatter.write(entry, self.formatter.refgrams(entry))
         if db.notes(entry):
-            print ' %s : %s' % (' ' * db._longest, db.notes(entry))
-        print
+            self.formatter.write(entry, db.notes(entry))
 
 
 class Type(Command):
@@ -306,20 +335,14 @@ class Gloss(Command):
                                dest='place', help='Gloss word place')
 
     def output(self, entry, db, options):
-        if options.place in db.glosses(entry):
-            if options.quiet:
+        if options.quiet:
+            if options.place in db.glosses(entry):
                 print db.glosses(entry)[options.place][0][0]
             else:
-                places = [('"%s" in the sense of "%s"' % i if i[1] else
-                           '"%s"' % i[0])
-                          for i in db.glosses(entry)[options.place]]
-                print ' %s%s : %s' % (' ' * (db._longest-len(entry)),
-                                      entry, ', '.join(places).encode('utf-8'))
-        else:
-            if options.quiet:
                 print
-            else:
-                print ' %s%s : ' % (' ' * (db._longest-len(entry)), entry)
+        else:
+            data = self.formatter.glosses(entry, options.place)
+            self.formatter.write(entry, data)
 
 
 class Rafsi(Command):
@@ -329,9 +352,7 @@ class Rafsi(Command):
         if options.quiet:
             print ' '.join(db.rafsi(entry))
         else:
-            rafsi = ['-%s-' % r for r in db.rafsi(entry)]
-            print ' %s%s : %s' % (' ' * (db._longest-len(entry)),
-                                  entry, ', '.join(rafsi))
+            self.formatter.write(entry, self.formatter.rafsi(entry))
 
 
 class Selmaho(Command):
@@ -341,13 +362,8 @@ class Selmaho(Command):
         if options.quiet:
             print db.selmaho(entry)
         else:
-            urls = []
-            selmaho = re.search(r'^([a-zA-Z]+)', db.selmaho(entry))
-            if selmaho and selmaho.group(1) in _refgram:
-                urls = ['<http://dag.github.com/cll/%s/%s/>' % i
-                        for i in _refgram[selmaho.group(1)]]
-            print ' %s%s : %s %s' % (' ' * (db._longest-len(entry)), entry,
-                                     db.selmaho(entry), ', '.join(urls))
+            data = [db.selmaho(entry), self.formatter.refgrams(entry)]
+            self.formatter.write(entry, ' '.join(data))
 
 
 class Definition(Command):
