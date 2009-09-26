@@ -431,9 +431,10 @@ class Filter():
     @pattern
     def rafsi(self, entry, pattern):
         if isinstance(pattern, basestring):
-            if len(pattern) == 4:
+            pattern = pattern.replace('h', "'")
+            if len(pattern) == 4 and "'" not in pattern:
                 return self._db.type(entry) == 'gismu' and entry[0:4] == pattern
-            return pattern.replace('h', "'") in self._db.rafsi(entry)
+            return pattern in self._db.rafsi(entry)
         return any([pattern.search(i) for i in self._db.rafsi(entry)])
 
     @pattern
