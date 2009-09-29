@@ -280,7 +280,7 @@ class Find():
     """Search for entries."""
 
     def __init__(self):
-        parser = OptionParser(usage='makfa find [options] [query]',
+        parser = OptionParser(usage='makfa find [options] [query...]',
                               description=self.__class__.__doc__)
         parser.add_option('-t', '--type', dest='type', help='Type of word')
         parser.add_option('-v', '--valsi', dest='valsi',
@@ -309,15 +309,15 @@ class Find():
         self.options = options
         filter = Filter(db)
         if args:
-            query = ' '.join(args)
             filter.inclusive()
+        for query in args:
             filter.gloss(query, options.regexp)
             filter.valsi(query, options.regexp)
             filter.rafsi(query, options.regexp)
             filter.selmaho(query, options.regexp)
             filter.definition(query ,True)
             filter.notes(query, True)
-            filter.exclusive()
+        filter.exclusive()
         filter.definition(options.definition, True)
         filter.gloss(options.gloss, options.regexp)
         filter.notes(options.notes, True)
