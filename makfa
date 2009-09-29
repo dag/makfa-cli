@@ -137,6 +137,32 @@ _refgram = {'A': [(14, 6)],
             'ZOhU': [(16, 2), (19, 4)]}
 
 
+_terminators = {'BE': 'BEhO',
+                'PA': 'BOI',
+                'BY': 'BOI',
+                'COI': 'DOhU',
+                'DOI': 'DOhU',
+                'FIhO': 'FEhU',
+                'GOI': 'GEhU',
+                'NU': 'KEI',
+                'KE': 'KEhE',
+                'LE': 'KU',
+                'LA': 'KU',
+                'PEhO': 'KUhE',
+                'NOI': 'KUhO',
+                'LU': 'LIhU',
+                'LI': 'LOhO',
+                'LAhE': 'LUhU',
+                'NAhE+BO': 'LUhU',
+                'ME': 'MEhU',
+                'NUhI': 'NUhU',
+                'SEI': 'SEhU',
+                'SOI': 'SEhU',
+                'TO': 'TOI',
+                'TUhE': 'TUhU',
+                'VEI': 'VEhO'}
+
+
 
 # --- CLI helpers ---
 
@@ -174,12 +200,25 @@ class Formatter():
     def refgrams(self, entry):
         selmaho = self._db.selmaho(entry)
         if selmaho:
-            pure = re.search(r'^([a-zA-Z]+)', selmaho).group(1)
+            pure = self._pure_selmaho(selmaho)
             if pure in _refgram:
                 urls = ['<http://dag.github.com/cll/%s/%s/>' % i
                         for i in _refgram[pure]]
                 return ', '.join(urls)
         return ''
+
+    def selmaho(self, entry):
+        selmaho = self._db.selmaho(entry)
+        if selmaho:
+            pure = self._pure_selmaho(selmaho)
+            if pure in _terminators:
+                return '%s...%s' % (selmaho, _terminators[pure])
+            else:
+                return selmaho
+        return ''
+
+    def _pure_selmaho(self, selmaho):
+        return re.search(r'^([a-zA-Z]+)', selmaho).group(1)
 
 
 class Command():
@@ -289,7 +328,8 @@ class Show(Command):
                                    description=self.__class__.__doc__)
 
     def output(self, entry, db, options):
-        meta = [db.type(entry), db.selmaho(entry), self.formatter.rafsi(entry)]
+        meta = [db.type(entry), self.formatter.selmaho(entry),
+                self.formatter.rafsi(entry)]
         self.formatter.write(entry, ' '.join([i for i in meta if i]))
         self.formatter.write(entry, db.definition(entry))
         for place in db.glosses(entry):
@@ -380,7 +420,8 @@ class Selmaho(Command):
         if options.quiet:
             print db.selmaho(entry)
         else:
-            data = [db.selmaho(entry), self.formatter.refgrams(entry)]
+            data = [self.formatter.selmaho(entry),
+                    self.formatter.refgrams(entry)]
             self.formatter.write(entry, ' '.join(data))
 
 
