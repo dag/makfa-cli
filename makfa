@@ -168,6 +168,9 @@ class Formatter():
             return '(x%d) %s' % (place, ', '.join(keywords).encode('utf-8'))
         return ''
 
+    def rafsi(self, entry):
+        return ', '.join(['-%s-' % r for r in self._db.rafsi(entry)])
+
     def refgrams(self, entry):
         selmaho = self._db.selmaho(entry)
         if selmaho:
@@ -177,9 +180,6 @@ class Formatter():
                         for i in _refgram[pure]]
                 return ', '.join(urls)
         return ''
-
-    def rafsi(self, entry):
-        return ', '.join(['-%s-' % r for r in self._db.rafsi(entry)])
 
 
 class Command():
