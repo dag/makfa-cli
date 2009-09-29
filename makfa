@@ -433,6 +433,53 @@ class Type(Command):
 # --- Dictionary API ---
 
 
+class Updater():
+
+    def __init__(self, lang='en'):
+        self.db = {'order': [], 'entries': {}}
+        url = 'http://jbovlaste.lojban.org/export/xml-export.html?lang=%s'
+        tree = etree.parse(urllib.urlopen(url % lang))
+        types = ['gismu', 'cmavo', 'cmavo cluster', 'lujvo', "fu'ivla",
+                 'experimental gismu', 'experimental cmavo', 'cmene']
+        for type in types:
+            for valsi in tree.findall('//valsi'):
+                if valsi.get('type') == type:
+                    self._save(valsi)
+        for valsi in tree.findall('//nlword'):
+            word = valsi.get('valsi')
+            place = int(valsi.get('place') or '1')
+            sense = valsi.get('sense')
+            if place not in self.db['entries'][word]['places']:
+                self.db['entries'][word]['places'][place] = []
+            self.db['entries'][word]['places'][place]. \
+                append((valsi.get('word'), sense))
+        pickle.dump(self.db, open(path.expanduser('~/.makfa.dump'), 'w'), -1)
+
+    def _save(self, valsi):
+        word = valsi.get('word')
+        self.db['order'].append(word)
+        self.db['entries'][word] = {'type': valsi.get('type'), 'rafsi': [],
+                                    'selmaho': None, 'definition': None,
+                                    'notes': None, 'places': {}}
+        for child in valsi.getchildren():
+            if child.tag == 'rafsi':
+                self.db['entries'][word]['rafsi'].append(child.text)
+            elif child.tag == 'selmaho':
+                self.db['entries'][word]['selmaho'] = child.text
+            elif child.tag == 'definition':
+                self.db['entries'][word]['definition'] = \
+                    self._prettyplace(child.text)
+            elif child.tag == 'notes':
+                self.db['entries'][word]['notes'] = \
+                    self._prettyplace(child.text)
+
+    def _prettyplace(self, defn):
+        def f(m):
+            res = m.group(1).replace('_', '')
+            return res.replace('{', '').replace('}', '')
+        return re.sub(r'\$(.+?)\$', f, defn.replace('\n', ' '))
+
+
 class Filter():
 
     def __init__(self, db):
@@ -517,41 +564,7 @@ class Dictionary():
             self._db = pickle.load(open(path.expanduser('~/.makfa.dump')))
         except:
             sys.stderr.write('(Fetching dictionary, this may take a minute.)\n')
-            db = {'order': [], 'entries': {}}
-            url = 'http://jbovlaste.lojban.org/export/xml-export.html?lang=en'
-            tree = etree.parse(urllib.urlopen(url))
-            types = ['gismu', 'cmavo', 'cmavo cluster', 'lujvo', "fu'ivla",
-                     'experimental gismu', 'experimental cmavo', 'cmene']
-            for type in types:
-                for valsi in tree.findall('//valsi'):
-                    if valsi.get('type') == type:
-                        word = valsi.get('word')
-                        db['order'].append(word)
-                        db['entries'][word] = {'type': type, 'rafsi': [],
-                                               'selmaho': None,
-                                               'definition': None,
-                                               'notes': None, 'places': {}}
-                        for child in valsi.getchildren():
-                            if child.tag == 'rafsi':
-                                db['entries'][word]['rafsi'].append(child.text)
-                            elif child.tag == 'selmaho':
-                                db['entries'][word]['selmaho'] = child.text
-                            elif child.tag == 'definition':
-                                db['entries'][word]['definition'] = \
-                                    self._prettyplace(child.text)
-                            elif child.tag == 'notes':
-                                db['entries'][word]['notes'] = \
-                                    self._prettyplace(child.text)
-            for valsi in tree.findall('//nlword'):
-                word = valsi.get('valsi')
-                place = int(valsi.get('place') or '1')
-                sense = valsi.get('sense')
-                if place not in db['entries'][word]['places']:
-                    db['entries'][word]['places'][place] = []
-                db['entries'][word]['places'][place]. \
-                    append((valsi.get('word'), sense))
-            pickle.dump(db, open(path.expanduser('~/.makfa.dump'), 'w'), -1)
-            self._db = db
+            self._db = Updater().db
         self._longest = sorted([len(i) for i in self._db['order']])[-1]
 
     def definition(self, entry):
@@ -571,12 +584,6 @@ class Dictionary():
 
     def type(self, entry):
         return self[entry]['type']
-
-    def _prettyplace(self, defn):
-        def f(m):
-            res = m.group(1).replace('_', '')
-            return res.replace('{', '').replace('}', '')
-        return re.sub(r'\$(.+?)\$', f, defn.replace('\n', ' '))
 
     def __getitem__(self, key):
         return self._db['entries'][key]
