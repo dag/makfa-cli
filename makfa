@@ -257,6 +257,25 @@ class Command():
 # --- Commands ---
 
 
+class Update():
+    """Update dictionary."""
+
+    def __init__(self):
+        self.parser = OptionParser(usage='makfa update [language]',
+                                   description=self.__class__.__doc__)
+
+    def parse(self, argv):
+        options, args = self.parser.parse_args(argv)
+        print 'Updating dictionary...'
+        if args:
+            try:
+                Updater(args[0])
+            except SyntaxError:
+                print 'Invalid language code.'
+        else:
+            Updater()
+
+
 class Find():
     """Search for entries."""
 
@@ -598,13 +617,17 @@ class Dictionary():
 
 def main(command, args):
     try:
-        command.parse(args, Dictionary())
+        if isinstance(command, Update):
+            command.parse(args)
+        else:
+            command.parse(args, Dictionary())
     except (KeyboardInterrupt, EOFError):
         pass
 
 
 if __name__ == '__main__':
-    commands = {'find': Find,
+    commands = {'update': Update,
+                'find': Find,
                 'show': Show,
                 'console': Console,
                 'definition': Definition,
