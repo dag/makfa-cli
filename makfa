@@ -251,17 +251,15 @@ class Find():
         self.options = options
         filter = Filter(db)
         if args:
-            filter.results = []
-            query, regexp = ' '.join(args), options.regexp
-            filter.results.extend(Filter(db).gloss(query, regexp).results)
-            filter.results.extend(Filter(db).valsi(query, regexp).results)
-            filter.results.extend(Filter(db).rafsi(query, regexp).results)
-            filter.results.extend(Filter(db).selmaho(query, regexp).results)
-            filter.results.extend(Filter(db).definition(query, True).results)
-            filter.results.extend(Filter(db).notes(query, True).results)
-            uniq = []
-            [uniq.append(i) for i in filter.results if i not in uniq]
-            filter.results = uniq
+            query = ' '.join(args)
+            filter.inclusive()
+            filter.gloss(query, options.regexp)
+            filter.valsi(query, options.regexp)
+            filter.rafsi(query, options.regexp)
+            filter.selmaho(query, options.regexp)
+            filter.definition(query ,True)
+            filter.notes(query, True)
+            filter.exclusive()
         filter.definition(options.definition, True)
         filter.gloss(options.gloss, options.regexp)
         filter.notes(options.notes, True)
@@ -399,14 +397,29 @@ class Filter():
     def __init__(self, db):
         self._db = db
         self.results = list(db)
+        self._inclusive = False
+
+    def inclusive(self):
+        self._inclusive = True
+        self.results = []
+        return self
+
+    def exclusive(self):
+        self._inclusive = False
+        return self
 
     def pattern(method):
         def f(self, pattern=None, regexp=False):
             if pattern:
                 if regexp:
                     pattern = re.compile(pattern, re.IGNORECASE)
-                self.results = [i for i in self.results
-                                  if method(self, i, pattern)]
+                if self._inclusive:
+                    for i in self._db:
+                        if method(self, i, pattern) and i not in self.results:
+                            self.results.append(i)
+                else:
+                    self.results = [i for i in self.results
+                                      if method(self, i, pattern)]
             return self
         return f
 
