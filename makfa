@@ -551,16 +551,22 @@ class Filter():
     @pattern
     def rafsi(self, entry, pattern):
         if isinstance(pattern, basestring):
-            pattern = pattern.replace('h', "'")
-            if len(pattern) == 4 and "'" not in pattern:
-                return self._db.type(entry) == 'gismu' and entry[0:4] == pattern
-            return pattern in self._db.rafsi(entry)
+            for p in re.split(r"[^a-zA-Z']+", pattern.replace('h', "'")):
+                if len(p) == 4 and "'" not in p:
+                    if self._db.type(entry) == 'gismu' and entry[0:4] == p:
+                        return True
+                if p in self._db.rafsi(entry):
+                    return True
+            return False
         return any([pattern.search(i) for i in self._db.rafsi(entry)])
 
     @pattern
     def selmaho(self, entry, pattern):
         if isinstance(pattern, basestring):
-            return pattern.upper() == self._db.selmaho(entry).upper()
+            for p in re.split(r"\W+", pattern):
+                if p.upper() == self._db.selmaho(entry).upper():
+                    return True
+            return False
         return pattern.search(self._db.selmaho(entry) or '')
 
     @pattern
