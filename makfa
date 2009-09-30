@@ -563,7 +563,7 @@ class Filter():
     @pattern
     def selmaho(self, entry, pattern):
         if isinstance(pattern, basestring):
-            for p in re.split(r"\W+", pattern):
+            for p in re.split(r'\W+', pattern):
                 if p.upper() == self._db.selmaho(entry).upper():
                     return True
             return False
