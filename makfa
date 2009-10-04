@@ -249,7 +249,7 @@ class Command():
 
     def parse(self, argv, db):
         self.formatter = Formatter(db)
-        (options, args) = self.parser.parse_args(argv)
+        options, args = self.parser.parse_args(argv)
         if args:
             for entry in args:
                 entry = entry.replace('h', "'")
@@ -322,7 +322,7 @@ class Find():
         self.parser = parser
 
     def results(self, argv, db):
-        (options, args) = self.parser.parse_args(argv)
+        options, args = self.parser.parse_args(argv)
         self.options = options
         filter = Filter(db)
         if args:
