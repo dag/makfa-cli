@@ -364,8 +364,8 @@ class Show(Command):
                                    description=self.__class__.__doc__)
 
     def output(self, entry, db, options):
-        meta = (db.type(entry), self.formatter.selmaho(entry),
-                self.formatter.rafsi(entry))
+        meta = db.type(entry), self.formatter.selmaho(entry), \
+               self.formatter.rafsi(entry)
         self.formatter.write(entry, ' '.join([i for i in meta if i]))
         self.formatter.write(entry, db.definition(entry))
         for place in db.glosses(entry):
@@ -456,8 +456,7 @@ class Selmaho(Command):
         if options.quiet:
             print db.selmaho(entry)
         else:
-            data = (self.formatter.selmaho(entry),
-                    self.formatter.refgrams(entry))
+            data = self.formatter.selmaho(entry), self.formatter.refgrams(entry)
             self.formatter.write(entry, ' '.join(data))
 
 
@@ -475,8 +474,8 @@ class Updater(object):
         self.db = {'order': [], 'entries': {}}
         url = 'http://jbovlaste.lojban.org/export/xml-export.html?lang=%s'
         tree = etree.parse(urllib.urlopen(url % lang))
-        types = ('gismu', 'cmavo', 'cmavo cluster', 'lujvo', "fu'ivla",
-                 'experimental gismu', 'experimental cmavo', 'cmene')
+        types = 'gismu', 'cmavo', 'cmavo cluster', 'lujvo', "fu'ivla", \
+                'experimental gismu', 'experimental cmavo', 'cmene'
         for type in types:
             for valsi in tree.findall('//valsi'):
                 if valsi.get('type') == type:
@@ -661,7 +660,7 @@ if __name__ == '__main__':
                 'selmaho': Selmaho,
                 'type': Type}
 
-    helps = ('help', 'commands', '-h', '--help')
+    helps = 'help', 'commands', '-h', '--help'
     if len(sys.argv) == 1 or any([sys.argv[1] == h for h in helps]):
         print 'Usage: makfa <command> [options]'
         print
