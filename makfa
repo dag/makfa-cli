@@ -2,9 +2,11 @@
 
 from optparse import OptionParser
 from os import path
+from subprocess import Popen, PIPE
 import cPickle as pickle
 import re
 import sys
+import textwrap
 import urllib
 import xml.etree.cElementTree as etree
 
@@ -173,17 +175,21 @@ class Formatter():
         self._db = db
         self._last = None
         self._multi = False
+        try:
+            self.columns = int(Popen(['stty', 'size'],
+                                     stdout=PIPE).communicate()[0].split()[1])
+        except:
+            self.columns = 80
 
     def write(self, entry, data=''):
         if not entry == self._last:
             if self._multi and self._last:
                 self._multi = False
                 print
-            print ' %s%s : %s' % (' ' * (self._db._longest-len(entry)),
-                                  entry, data)
+            self._wrap(entry, data)
         else:
             self._multi = True
-            print ' %s : %s' % (' ' * self._db._longest, data)
+            self._wrap(entry, data, False)
         self._last = entry
 
     def glosses(self, entry, place=1):
@@ -219,6 +225,17 @@ class Formatter():
 
     def _pure_selmaho(self, selmaho):
         return re.search(r'^([a-zA-Z]+)', selmaho).group(1)
+
+    def _wrap(self, entry, data, first=True):
+        data = textwrap.wrap(data, self.columns-self._db._longest-5)
+        if first:
+            print ' %s%s : %s' % (' ' * (self._db._longest-len(entry)),
+                                  entry, data.pop(0) if data else '')
+        else:
+            print ' %s : %s' % (' ' * self._db._longest,
+                                data.pop(0) if data else '')
+        for line in data:
+            print ' %s   %s' % (' ' * self._db._longest, line)
 
 
 class Command():
