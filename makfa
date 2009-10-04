@@ -661,7 +661,7 @@ if __name__ == '__main__':
                 'type': Type}
 
     helps = 'help', 'commands', '-h', '--help'
-    if len(sys.argv) == 1 or any([sys.argv[1] == h for h in helps]):
+    if len(sys.argv) == 1 or sys.argv[1] in helps:
         print 'Usage: makfa <command> [options]'
         print
         print 'Lojban dictionary.'
