@@ -366,7 +366,7 @@ class Show(Command):
     def output(self, entry, db, options):
         meta = db.type(entry), self.formatter.selmaho(entry), \
                self.formatter.rafsi(entry)
-        self.formatter.write(entry, ' '.join(i for i in meta if i))
+        self.formatter.write(entry, ' '.join(filter(None, meta)))
         self.formatter.write(entry, db.definition(entry))
         for place in db.glosses(entry):
             self.formatter.write(entry, self.formatter.glosses(entry, place))
