@@ -606,7 +606,7 @@ class Dictionary(object):
         except:
             sys.stderr.write('(Fetching dictionary, this may take a minute.)\n')
             self._db = Updater().db
-        self._longest = sorted(len(i) for i in self._db['order'])[-1]
+        self._longest = sorted(map(len, self))[-1]
 
     def definition(self, entry):
         return self[entry]['definition'].encode('utf-8')
