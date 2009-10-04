@@ -169,7 +169,7 @@ _terminators = {'BE': 'BEhO',
 # --- CLI helpers ---
 
 
-class Formatter():
+class Formatter(object):
 
     def __init__(self, db):
         self._db = db
@@ -238,7 +238,7 @@ class Formatter():
             print ' %s   %s' % (' ' * self._db._longest, line)
 
 
-class Command():
+class Command(object):
 
     def __init__(self):
         self.name = self.__class__.__name__.lower()
@@ -274,7 +274,7 @@ class Command():
 # --- Commands ---
 
 
-class Update():
+class Update(object):
     """Update dictionary."""
 
     def __init__(self):
@@ -293,7 +293,7 @@ class Update():
             Updater()
 
 
-class Find():
+class Find(object):
     """Search for entries."""
 
     def __init__(self):
@@ -376,7 +376,7 @@ class Show(Command):
             self.formatter.write(entry, db.notes(entry))
 
 
-class Console():
+class Console(object):
     """Prompt for search queries and show full results."""
 
     def __init__(self):
@@ -469,7 +469,7 @@ class Type(Command):
 # --- Dictionary API ---
 
 
-class Updater():
+class Updater(object):
 
     def __init__(self, lang='en'):
         self.db = {'order': [], 'entries': {}}
@@ -516,7 +516,7 @@ class Updater():
         return re.sub(r'\$(.+?)\$', f, defn.replace('\n', ' '))
 
 
-class Filter():
+class Filter(object):
 
     def __init__(self, db):
         self._db = db
@@ -599,7 +599,7 @@ class Filter():
         return pattern.search(entry)
 
 
-class Dictionary():
+class Dictionary(object):
 
     def __init__(self):
         try:
