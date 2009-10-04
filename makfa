@@ -604,7 +604,7 @@ class Dictionary(object):
         try:
             self._db = pickle.load(open(path.expanduser('~/.makfa.dump')))
         except:
-            sys.stderr.write('(Fetching dictionary, this may take a minute.)\n')
+            print >>sys.stderr, '(Fetching dictionary, this may take a minute.)'
             self._db = Updater().db
         self._longest = sorted(map(len, self))[-1]
 
