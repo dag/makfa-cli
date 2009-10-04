@@ -670,7 +670,7 @@ if __name__ == '__main__':
         print
         for command in sorted(commands.keys()):
             print '  %s%s  %s' % (' ' * (10-len(command)), command,
-                                commands[command].__doc__ or '')
+                                  commands[command].__doc__ or '')
         print
 
     elif sys.argv[1] not in commands:
