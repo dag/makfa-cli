@@ -201,7 +201,7 @@ class Formatter(object):
         return ''
 
     def rafsi(self, entry):
-        return ', '.join(['-%s-' % r for r in self._db.rafsi(entry)])
+        return ', '.join('-%s-' % r for r in self._db.rafsi(entry))
 
     def refgrams(self, entry):
         selmaho = self._db.selmaho(entry)
@@ -366,7 +366,7 @@ class Show(Command):
     def output(self, entry, db, options):
         meta = db.type(entry), self.formatter.selmaho(entry), \
                self.formatter.rafsi(entry)
-        self.formatter.write(entry, ' '.join([i for i in meta if i]))
+        self.formatter.write(entry, ' '.join(i for i in meta if i))
         self.formatter.write(entry, db.definition(entry))
         for place in db.glosses(entry):
             self.formatter.write(entry, self.formatter.glosses(entry, place))
@@ -574,7 +574,7 @@ class Filter(object):
                 if p in self._db.rafsi(entry):
                     return True
             return False
-        return any([pattern.search(i) for i in self._db.rafsi(entry)])
+        return any(pattern.search(i) for i in self._db.rafsi(entry))
 
     @pattern
     def selmaho(self, entry, pattern):
@@ -606,7 +606,7 @@ class Dictionary(object):
         except:
             sys.stderr.write('(Fetching dictionary, this may take a minute.)\n')
             self._db = Updater().db
-        self._longest = sorted([len(i) for i in self._db['order']])[-1]
+        self._longest = sorted(len(i) for i in self._db['order'])[-1]
 
     def definition(self, entry):
         return self[entry]['definition'].encode('utf-8')
