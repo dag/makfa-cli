@@ -176,7 +176,7 @@ class Formatter(object):
         self._last = None
         self._multi = False
         try:
-            self.columns = int(Popen(['stty', 'size'],
+            self.columns = int(Popen(('stty', 'size'),
                                      stdout=PIPE).communicate()[0].split()[1])
         except:
             self.columns = 80
