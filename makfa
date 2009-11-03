@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
 from optparse import OptionParser
-from os import path
 from subprocess import Popen, PIPE
 import cPickle as pickle
+import os
 import re
 import sys
 import textwrap
@@ -169,17 +169,35 @@ _terminators = {'BE': 'BEhO',
 # --- CLI helpers ---
 
 
+# http://stackoverflow.com/questions/566746/how-to-get-console-window-width-in-python
+def get_terminal_size():
+    if 'COLUMNS' in os.environ:
+        return int(os.environ.get('LINES', 25)), int(os.environ['COLUMNS'])
+    def ioctl_GWINSZ(fd):
+        try:
+            import fcntl, termios, struct
+            return struct.unpack('hh',
+                                 fcntl.ioctl(fd, termios.TIOCGWINSZ, '1234'))
+        except:
+            return None
+    cr = ioctl_GWINSZ(0) or ioctl_GWINSZ(1) or ioctl_GWINSZ(2)
+    if not cr:
+        try:
+            cr = ioctl_GWINSZ(os.open(os.ctermid(), os.O_RDONLY))
+        except:
+            pass
+    if not cr:
+        cr = os.environ.get('LINES', 25), os.environ.get('COLUMNS', 80)
+    return int(cr[0]), int(cr[1])
+
+
 class Formatter(object):
 
     def __init__(self, db):
         self._db = db
         self._last = None
         self._multi = False
-        try:
-            self.columns = int(Popen(('stty', 'size'),
-                                     stdout=PIPE).communicate()[0].split()[1])
-        except:
-            self.columns = 80
+        self.columns = get_terminal_size()[1]
 
     def write(self, entry, data=''):
         if not entry == self._last:
@@ -488,7 +506,7 @@ class Updater(object):
                 self.db['entries'][word]['places'][place] = []
             self.db['entries'][word]['places'][place]. \
                 append((valsi.get('word'), sense))
-        pickle.dump(self.db, open(path.expanduser('~/.makfa.dump'), 'w'), -1)
+        pickle.dump(self.db, open(os.path.expanduser('~/.makfa.dump'), 'w'), -1)
 
     def _save(self, valsi):
         word = valsi.get('word')
@@ -602,7 +620,7 @@ class Dictionary(object):
 
     def __init__(self):
         try:
-            self._db = pickle.load(open(path.expanduser('~/.makfa.dump')))
+            self._db = pickle.load(open(os.path.expanduser('~/.makfa.dump')))
         except:
             print >>sys.stderr, '(Fetching dictionary, this may take a minute.)'
             self._db = Updater().db
