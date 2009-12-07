@@ -597,7 +597,7 @@ class Filter(object):
     @pattern
     def selmaho(self, entry, pattern):
         if isinstance(pattern, basestring):
-            for p in re.split(r"[^a-zA-Z']+", pattern):
+            for p in re.split(r"[^a-zA-Z0-9*']+", pattern):
                 if p.upper() == self._db.selmaho(entry).upper():
                     return True
             return False
